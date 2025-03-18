@@ -1,6 +1,3 @@
-<?php
-// index.php - Formulario responsivo en PHP
-?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -8,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scorecard de sostenibilidad by CODI Costa Rica</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         body {
             background-color: #e0f7fa; /* Fondo claro azul verdoso */
@@ -69,7 +67,7 @@
         .section {
             margin-bottom: 30px; /* Más espacio entre secciones */
             padding-bottom: 20px; /* Espacio interno en la parte inferior */
-            border-bottom: 2px solid #c8e6c9; /* Borde inferior verde claro */
+            /* border-bottom: 2px solid #c8e6c9; /* Borde inferior verde claro */
         }
         .bkgreen {
             background-color: #94cc97; /* Verde medio */
@@ -102,7 +100,7 @@
                         </li><li>Evalúa, mejora y construye con impacto positivo.</li></ul>
                     </div>
                     <div class="card-body">
-                        <form action="procesar.php" method="post">
+                        <form action="#" method="post">
                             <div class="row mb-3 align-items-center">
                                 <label class="col-md-4 col-form-label">Empresa</label>
                                 <div class="col-md-8">
@@ -207,7 +205,7 @@
                                     
                                     selectTipo.addEventListener('change', function () {
                                         let isResidencial = this.value === 'Comercial';
-                            
+                                        let energiaMaxInput = document.getElementById('energiaMax');
                                         // Muestra todas las secciones al elegir un tipo de evaluación
                                         contenido.forEach(section => {
                                             section.style.display = 'block';
@@ -215,19 +213,22 @@
                             
                                         // Ocultar/deshabilitar checkboxes específicos para Residencial
                                     ocultarResidencial.forEach(id => {
-                                                    let checkbox = document.getElementById(id);
-                                                    if (checkbox) {
-                                                        if (isResidencial) {
-                                                            checkbox.checked = false; // 🔹 Desmarcar el checkbox
-                                                            checkbox.dispatchEvent(new Event('change')); // 🔹 Disparar su evento 'change'
-                                                        }
-                                                        checkbox.disabled = isResidencial;
-                                                        //checkbox.closest('.row').style.display = isResidencial ? 'none' : 'flex';
-                                                        checkbox.style.display = isResidencial ? 'none' : 'block';
-                                                    }
-                                                });
+                                       let checkbox = document.getElementById(id);
+                                       if (checkbox) {
+                                            energiaMaxInput.value = 12;
+                                            if (isResidencial) {
+                                                energiaMaxInput.value = 10;
+                                                checkbox.checked = false; // 🔹 Desmarcar el checkbox
+                                                checkbox.dispatchEvent(new Event('change')); // 🔹 Disparar su evento 'change'
+                                            }
+                                            checkbox.disabled = isResidencial;
+                                            checkbox.style.display = isResidencial ? 'none' : 'block';
+                                            }
+                                        });
+                                    actualizarGrafico();    
                                     });
                                 });
+                                
                             </script>
 <!----- GOBERNANZA ----->                             
                             <div class="mb-3 section">
@@ -871,8 +872,180 @@
                             </script>                           
                             
                             
+                        <div class="mb-3 section">
+                                <!-- Tu formulario y contenido aquí -->
+                                <style>
+                                    h5.gobernanza { background-color: rgb(34, 121, 118); color: white; }
+                                    h5.agua { background-color: rgb(49, 148, 209); color: white; }
+                                    h5.energia { background-color: rgb(239, 106, 6); color: white; }
+                                    h5.materiales { background-color: rgb(249, 177, 34); color: white; }
+                                    h5.movilidad { background-color: rgb(32, 112, 128); color: white; }
+                                    h5.biodiversidad { background-color: rgb(113, 174, 47); color: white; }
+                                    h5.impacto { background-color: rgb(205, 79, 23); color: white; }
+                                </style>
+                                <!-- Añadir un canvas para el gráfico -->
+                                <canvas id="myChart"></canvas>
+                                
+                               <script>
+                                    document.addEventListener("DOMContentLoaded", function() {
+                                        // Función para calcular el total de puntos por categoría
+                                        function calcularPuntos(claseCheckbox) {
+                                            let total = 0;
+                                            document.querySelectorAll(`.${claseCheckbox}:checked`).forEach(cb => {
+                                                total += parseFloat(cb.value) || 0; // Asegura que el valor sea un número
+                                            });
+                                            return total;
+                                        }
+                        
+                                        // Valores máximos
+                                        const maxGobernanza = parseFloat(document.getElementById('gobMax').value) || 0;
+                                        const maxAgua = parseFloat(document.getElementById('aguaMax').value) || 0;
+                                        const maxEnergia = parseFloat(document.getElementById('energiaMax').value) || 0;
+                                        const maxMateriales = parseFloat(document.getElementById('materialesMax').value) || 0;
+                                        const maxMovilidad = parseFloat(document.getElementById('movilidadMax').value) || 0;
+                                        const maxBiodiversidad = parseFloat(document.getElementById('biodiversidadMax').value) || 0;
+                                        const maxImpacto = parseFloat(document.getElementById('impactoMax').value) || 0;
+                        
+                                        // Inicializar el gráfico
+                                        const ctx = document.getElementById('myChart').getContext('2d');
+                                       
+                                        const myChart = new Chart(ctx, {
+                                            type: 'bar',
+                                            data: {
+                                                labels: ['Gobernanza', 'Agua', 'Energía', 'Materiales', 'Movilidad Sostenible', 'Biodiversidad y Regeneración', 'Impacto Social'],
+                                                datasets: [{
+                                                    label: '',
+                                                    data: [0, 0, 0, 0, 0, 0, 0], // Valores iniciales
+                                                    backgroundColor: [
+                                                        'rgba(34, 121, 118, 0.8)', // Color para Gobernanza
+                                                        'rgba(49, 148, 209, 0.8)', // Color para Agua
+                                                        'rgba(239, 106, 6, 0.8)', // Color para Energía
+                                                        'rgba(249, 177, 34, 0.8)', // Color para Materiales
+                                                        'rgba(32, 112, 128, 0.8)', // Color para Movilidad Sostenible
+                                                        'rgba(113, 174, 47, 0.8)', // Color para Biodiversidad y Regeneración
+                                                        'rgba(205, 79, 23, 0.8)' // Color para Impacto Social
+                                                    ],
+                                                    borderColor: [
+                                                        'rgba(34, 121, 118, 1)',
+                                                        'rgba(49, 148, 209, 1)',
+                                                        'rgba(239, 106, 6, 1)',
+                                                        'rgba(249, 177, 34, 1)',
+                                                        'rgba(32, 112, 128, 1)',
+                                                        'rgba(113, 174, 47, 1)',
+                                                        'rgba(205, 79, 23, 1)'
+                                                    ],
+                                                    borderWidth: 1,
+                                                    stack: 'Stack 0'
+                                                }, {
+                                                    label: '',
+                                                    data: [maxGobernanza, maxAgua, maxEnergia, maxMateriales, maxMovilidad, maxBiodiversidad, maxImpacto], // Valores máximos
+                                                    backgroundColor: [
+                                                        'rgba(34, 121, 118, 0.2)',
+                                                        'rgba(49, 148, 209, 0.2)',
+                                                        'rgba(239, 106, 6, 0.2)',
+                                                        'rgba(249, 177, 34, 0.2)',
+                                                        'rgba(32, 112, 128, 0.2)',
+                                                        'rgba(113, 174, 47, 0.2)',
+                                                        'rgba(205, 79, 23, 0.2)'
+                                                    ],
+                                                    borderColor: [
+                                                        'rgba(34, 121, 118, 0.2)',
+                                                        'rgba(49, 148, 209, 0.2)',
+                                                        'rgba(239, 106, 6, 0.2)',
+                                                        'rgba(249, 177, 34, 0.2)',
+                                                        'rgba(32, 112, 128, 0.2)',
+                                                        'rgba(113, 174, 47, 0.2)',
+                                                        'rgba(205, 79, 23, 0.2)'
+                                                    ],
+                                                    borderWidth: 1,
+                                                    stack: 'Stack 0'
+                                                }]
+                                            },
+                                            options: {
+                                                indexAxis: 'y', // Cambiar a barras horizontales
+                                                plugins: {
+                                                legend: {
+                                                    display: false // 🔴 Desactiva la leyenda
+                                                    }
+                                                },
+                                                responsive: true,
+                                                scales: {
+                                                    x: {
+                                                        beginAtZero: true,
+                                                        stacked: true, // Hacer las barras apiladas
+                                                        ticks: {
+                                                           stepSize: 1, // 🔢 Solo enteros
+                                                           precision: 0
+                                                         }
+                                                    },
+                                                    y: {
+                                                        stacked: true ,
+                                                        //display: false // 🔴 Ocultar etiquetas del eje Y
+                                                    }
+                                                },
+                                            }
+                                        });
+                        
+                                        // Actualizar el gráfico cuando se cambian los checkboxes
+                                        document.querySelectorAll('.form-check-input').forEach(checkbox => {
+                                            checkbox.addEventListener('change', () => {
+                                                const totalGobernanza = calcularPuntos('gobernanza');
+                                                const totalAgua = calcularPuntos('agua');
+                                                const totalEnergia = calcularPuntos('energia');
+                                                const totalMateriales = calcularPuntos('materiales');
+                                                const totalMovilidad = calcularPuntos('movilidad');
+                                                const totalBiodiversidad = calcularPuntos('biodiversidad');
+                                                const totalImpacto = calcularPuntos('impacto');
+                        
+                                                const restanteGobernanza = maxGobernanza - totalGobernanza;
+                                                const restanteAgua = maxAgua - totalAgua;
+                                                const restanteEnergia = maxEnergia - totalEnergia;
+                                                const restanteMateriales = maxMateriales - totalMateriales;
+                                                const restanteMovilidad = maxMovilidad - totalMovilidad;
+                                                const restanteBiodiversidad = maxBiodiversidad - totalBiodiversidad;
+                                                const restanteImpacto = maxImpacto - totalImpacto;
+                        
+                                                myChart.data.datasets[0].data = [totalGobernanza, totalAgua, totalEnergia, totalMateriales, totalMovilidad, totalBiodiversidad, totalImpacto];
+                                                myChart.data.datasets[1].data = [restanteGobernanza, restanteAgua, restanteEnergia, restanteMateriales, restanteMovilidad, restanteBiodiversidad, restanteImpacto];
+                                                myChart.update();
+                                            });
+                                        });
+                        
+                                        // Inicializar los valores del gráfico al cargar la página
+                                        const totalGobernanza = calcularPuntos('gobernanza');
+                                        const totalAgua = calcularPuntos('agua');
+                                        const totalEnergia = calcularPuntos('energia');
+                                        const totalMateriales = calcularPuntos('materiales');
+                                        const totalMovilidad = calcularPuntos('movilidad');
+                                        const totalBiodiversidad = calcularPuntos('biodiversidad');
+                                        const totalImpacto = calcularPuntos('impacto');
+                        
+                                        const restanteGobernanza = maxGobernanza - totalGobernanza;
+                                        const restanteAgua = maxAgua - totalAgua;
+                                        const restanteEnergia = maxEnergia - totalEnergia;
+                                        const restanteMateriales = maxMateriales - totalMateriales;
+                                        const restanteMovilidad = maxMovilidad - totalMovilidad;
+                                        const restanteBiodiversidad = maxBiodiversidad - totalBiodiversidad;
+                                        const restanteImpacto = maxImpacto - totalImpacto;
+                        
+                                        myChart.data.datasets[0].data = [totalGobernanza, totalAgua, totalEnergia, totalMateriales, totalMovilidad, totalBiodiversidad, totalImpacto];
+                                        myChart.data.datasets[1].data = [restanteGobernanza, restanteAgua, restanteEnergia, restanteMateriales, restanteMovilidad, restanteBiodiversidad, restanteImpacto];
+                                        myChart.update();
+                                    });
+                                    
+                                    function actualizarGrafico() {
+                                        const totalEnergia = calcularPuntos('energia');
+                                        const restanteEnergia = maxEnergia - totalEnergia;
+                                        alert("c");
+                                        myChart.data.datasets[1].data[2] = restanteEnergia; // Posición de 'Energía' en el dataset
+                                        myChart.update();
+                                    }
+                                </script>
+                            </div>
+
+
                             <div class="mb-3 bkgreen big section" style="backgorund-color: #d8eaf1 important!; padding-top: 20px">
-                                <center><p><b>Puntos Total</b><br><span id="totalPuntosGeneral">0</span></p></center>
+                                <center><p><b>Puntos Totales</b><br><span id="totalPuntosGeneral">0</span></p></center>
                             </div>
                             <script>
                                 document.querySelectorAll('.form-check-input').forEach(checkbox => {
@@ -886,15 +1059,13 @@
                                 });
                             </script>
                             
-
-
-
+                            
                             <script>
                                 function imprimirPagina() {
                                     window.print();
                                 }
                             </script>
-
+                            <br><br>
                             <button onclick="imprimirPagina()" class="btn btn-primary w-100 section">Imprimir <br>scorecard de Sostenibilidad para su proyecto inmobiliario</button>
                         </form>
                     </div>
